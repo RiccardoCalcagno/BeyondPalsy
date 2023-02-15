@@ -25,16 +25,40 @@ const description = marcelle.text('<strong>Instructions</strong><br><br>'+
 const labelInput = marcelle.textInput();
 const submitLable = marcelle.button("SUBMIT LABLE");
 
-const labels = [];
+
+let $lablesClicked = new Stream([], true);
+
+
+
+// --------------- TODO to remove, it is only for debug purposes -----------------------------------
+let initialLabels = ["Call Mom", "Hunger", "Navigate To", "I need to contact my terapist"];
+let initialAmbiguities = new Map();
+initialAmbiguities.set("Call Mom",["Hunger", "I need to contact my terapist"]);
+initialAmbiguities.set("Navigate To",["Hunger", "I need to contact my terapist", "Call Mom"]);
+
+
+const disambiguatorsSamplingButtons = fastSamplingButtons($lablesClicked, initialLabels, initialAmbiguities);
+
 
 submitLable.$click.subscribe(() => {
   let valueText = labelInput.$value.get();
   if(!valueText || valueText.length == 0){
     return;
   }
-  labels.push(valueText);
+  disambiguatorsSamplingButtons.addNewLable(valueText);
   labelInput.$value.set("");
   });
+
+
+/*
+const startTrainingButton = marcelle.button("START ASSOCIATIONS");
+
+startTrainingButton.$click.subscribe(() => {
+
+  disambiguatorsSamplingButtons.enableToShareClicks = true;
+});
+*/
+disambiguatorsSamplingButtons.enableToShareClicks = true;
 
 
 /*
@@ -58,16 +82,15 @@ clearTrainingSet.title = 'Clear training set command';
 
 
 
-const $instances = captureCommand.$click
-    .sample(input.$images)
-    .map(async (img) => ({
-        x: await featureExtractor.process(img),
-        y: "EXAMPLE then We will have lables from different buttons",
-        thumbnail: input.$thumbnails.get(),
+const $instances = disambiguatorsSamplingButtons.$lablesClicked
+    .map(async () => ({
+        x: await featureExtractor.process(input.captureImage()),
+        y: disambiguatorsSamplingButtons.$lablesClicked.get(),
+        thumbnail: input.captureThumbnail(),
     }))
     .awaitPromises();
 
-
+    
 const store = marcelle.dataStore('localStorage');
 const trainingSet = marcelle.dataset('TrainingSet', store);
   
@@ -145,9 +168,10 @@ const predViz = marcelle.confidencePlot($predictions);
 
 dash.page(nameOfPages[0]).sidebar(description/*, startTrainingButton*/);
 dash.page(nameOfPages[0]).use([labelInput, submitLable]);
+dash.page(nameOfPages[0]).use(disambiguatorsSamplingButtons);
 
 
-dash.page(nameOfPages[1]).use(captureCommand);
+dash.page(nameOfPages[1]).use(disambiguatorsSamplingButtons);
 dash.page(nameOfPages[1]).use(trainingSetBrowser);
 dash.page(nameOfPages[1]).use(clearTrainingSet);
 dash.page(nameOfPages[1]).sidebar(input, trainingButton);
