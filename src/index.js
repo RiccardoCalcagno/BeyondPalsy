@@ -59,14 +59,13 @@ clearTrainingSet.title = 'Clear training set command';
 
 
 const $instances = captureCommand.$click
-    .map(async () => ({
-        x: await featureExtractor.process(input.captureImage()),
+    .sample(input.$images)
+    .map(async (img) => ({
+        x: await featureExtractor.process(img),
         y: "EXAMPLE then We will have lables from different buttons",
-        thumbnail: input.captureThumbnail(),
+        thumbnail: input.$thumbnails.get(),
     }))
     .awaitPromises();
-
-
 
 
 const store = marcelle.dataStore('localStorage');
@@ -74,11 +73,7 @@ const trainingSet = marcelle.dataset('TrainingSet', store);
   
 $instances.subscribe(trainingSet.create);
 
-
 const trainingSetBrowser = marcelle.datasetBrowser(trainingSet);
-
-
-
 
 
 const trainingButton = marcelle.button('START TRAINING');
@@ -110,11 +105,10 @@ clearTrainingSet.$click.subscribe(() =>
 
 
 
-
-
-
-
 /*
+
+
+
 
 const classifier = marcelle.mlpClassifier({ layers: [32, 32], epochs: 20 });
 
@@ -145,7 +139,6 @@ const predViz = marcelle.confidencePlot($predictions);
 
 
 */
-
 
 
 
