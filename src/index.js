@@ -274,7 +274,6 @@ prog.$progress.subscribe(progs =>
   });
 
 
-/*
 const $predictions = input.$images
   .map(async (img) => {
     const features = await featureExtractor.process(img);
