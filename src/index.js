@@ -167,10 +167,10 @@ printDataset.$click.subscribe(async () => {
   let other_label_b = 'Navigate To';
 
   console.log('Launching Denis function');
-  let two_ids = await denis_function(primary_label, other_label_a, other_label_b);
+  let four_ids = await denis_function(primary_label, other_label_a, other_label_b);
   console.log('Finish Denis function');
-  console.log(two_ids);
-  return two_ids;
+  console.log(four_ids);
+  return four_ids;
 });
 
 
