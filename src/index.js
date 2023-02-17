@@ -159,9 +159,63 @@ $predictions.subscribe(console.log);
 
 const predViz = marcelle.confidencePlot($predictions);
 
+const salima_button = marcelle.button('Salima button');
+salima_button.$click.subscribe(async () => {
+
+  console.log('Launching Salima function');
+  let primary_labels = ['Hunger', 'Call Mom', 'Navigate To', 'I need to contact my terapist'];
+  let most_confused_L = await salima_function(primary_labels[0]);
+  let most_confused_M = await salima_function(primary_labels[1]);
+  let most_confused_N = await salima_function(primary_labels[2]);
+  let most_confused_O = await salima_function(primary_labels[3]);
+  console.log("The two most confused labels with [" + primary_labels[0] + "] are:");
+  console.log(most_confused_L);
+  console.log("The two most confused labels with [" + primary_labels[1] + "] are:");
+  console.log(most_confused_M);
+  console.log("The two most confused labels with [" + primary_labels[2] + "] are:");
+  console.log(most_confused_N);
+  console.log("The two most confused labels with [" + primary_labels[3] + "] are:");
+  console.log(most_confused_O)
+
+  console.log('Finish Salima function');
+  // It's a DUMMY return
+  return most_confused_L;
+});
+
+async function salima_function(primary_label) {
+  const THRESHOLD = 0.05;
+  console.log('Data store')
+  console.log(store);
+  const batchMLP = marcelle.batchPrediction('mlp', store);
+  // await batchMLP.clear();
+  const confusionMatrix = marcelle.confusionMatrix(batchMLP);
+  await batchMLP.predict(
+    classifier,
+    trainingSet);
+  let conf = confusionMatrix.$confusion.get();
+  conf.sort((a, b) => (a.v < b.v) ? 1 : -1);
+  console.log('Confusion matrix sorted');
+  console.log(conf);
+
+  let n_imgs_classified_as_primary_label = conf.
+    filter((img) => img.x == primary_label)
+    .reduce((acc, img) => acc + img.v, 0);
+  console.log('n_imgs_classified_as_primary_label: ' + n_imgs_classified_as_primary_label);
+
+  let classes_misunderstood_as_primary_label_over_threshold = conf
+    .filter((img) => img.x == primary_label && img.y != primary_label)
+    .filter((img) => img.v > THRESHOLD*n_imgs_classified_as_primary_label)
+    .map((img) => img.y);
+
+  console.log('classes_misunderstood_as_primary_label_over_threshold');
+  console.log(classes_misunderstood_as_primary_label_over_threshold);
+
+  return classes_misunderstood_as_primary_label_over_threshold;
+}
+
 // Button that prints the predictions
-const printDataset = marcelle.button('Print data-set');
-printDataset.$click.subscribe(async () => {
+const denis_button = marcelle.button('Denis button');
+denis_button.$click.subscribe(async () => {
   let primary_label = 'Hunger';
   let other_label_a = 'Call Mom';
   let other_label_b = 'Navigate To';
@@ -182,9 +236,15 @@ async function denis_function(primary_label, other_label_a, other_label_b) {
   //         confidences
   //  - id -> id of the image, can be used to get the image
   //          from the data storage
-  let $instances_primary_label = trainingSet.items()
-    .query({y: primary_label });
 
+  // --------------------------------- PRIMARY LABEL ---------------------------------
+  
+  let $instances_primary_label = trainingSet.items()
+  .query({y: primary_label });
+
+
+
+  
   // Converting the stream to an array
   let arr_instances_primary_label = await $instances_primary_label.toArray();
   console.log('Array of the instances of the primary label: [' + primary_label + ']');
@@ -231,7 +291,7 @@ async function denis_function(primary_label, other_label_a, other_label_b) {
   console.log('Index of max confidence of label b: ' + idx_max_confidence_label_b);
   console.log('Id of max confidence of label b: ' + ID_max_confidence_label_b);
 
-  // ----- WORKING ON THE SECONDARY LABEL A -----
+  // ----- ------------------WORKING ON THE SECONDARY LABEL A ------------------
   // Get the ID of the image in A with the highest confidence twoards the primary label
 
   let $instances_secondary_label_a = trainingSet.items()
@@ -270,7 +330,7 @@ async function denis_function(primary_label, other_label_a, other_label_b) {
   console.log('Index of max confidence of label a twoards primary label: ' + idx_max_confidence_label_a_twoards_primary_label);
   console.log('Id of max confidence of label a twoards primary label: ' + arr_id_pred_a[idx_max_confidence_label_a_twoards_primary_label]['id']);
 
-  // ----- WORKING ON THE SECONDARY LABEL B -----
+  // --------------------------- WORKING ON THE SECONDARY LABEL B -----
   // Get the ID of the image in B with the highest confidence twoards the primary label
 
   let $instances_secondary_label_b = trainingSet.items()
@@ -309,6 +369,11 @@ async function denis_function(primary_label, other_label_a, other_label_b) {
   console.log('Index of max confidence of label b twoards primary label: ' + idx_max_confidence_label_b_twoards_primary_label);
   console.log('Id of max confidence of label b twoards primary label: ' + arr_id_pred_b[idx_max_confidence_label_b_twoards_primary_label]['id']);
 
+  // let arr_thumbnails_primary_label = await trainingSet.items()
+  // .query({id: ID_max_confidence_label_a })
+  // .select('thumbnail').toArray(); 
+  // console.log('Thumbnail');
+  // console.log(arr_thumbnails_primary_label[0]['thumbnail']);
 
 // Returns:
 //  - ID of the image in the primary label closest to the secondary label A
@@ -330,11 +395,12 @@ dash.page(nameOfPages[0]).use(disambiguatorsSamplingButtons);
 
 dash.page(nameOfPages[1]).use(disambiguatorsSamplingButtons);
 dash.page(nameOfPages[1]).use(trainingSetBrowser);
-dash.page(nameOfPages[1]).use(clearTrainingSet);
+dash.page(nameOfPages[1]).use(clearTrainingSet);dash.page(nameOfPages[3]).use([salima_button]);
 dash.page(nameOfPages[1]).sidebar(input, trainingButton);
 dash.page(nameOfPages[1]).use(plotTraining);
 
-dash.page(nameOfPages[3]).use([printDataset]);
+dash.page(nameOfPages[3]).use([denis_button]);
+dash.page(nameOfPages[3]).use([salima_button]);
 
 dash.show();
 
