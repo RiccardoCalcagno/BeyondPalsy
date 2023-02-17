@@ -159,13 +159,6 @@ $instances.subscribe(trainingSet.create);
 const trainingSetBrowser = marcelle.datasetBrowser(trainingSet);
 
 
-const trainingButton = marcelle.button('START TRAINING');
-trainingButton.$click.subscribe(() => {
-
-  dash.page(nameOfPages[2]);
-});
-
-
 clearTrainingSet.$click.subscribe(() => 
 {
     //classifier.clear();
@@ -179,7 +172,6 @@ clearTrainingSet.$click.subscribe(() =>
 ------------------------------ Parallel Training Page ----------------------------
 
 */
-
 
 
 
@@ -244,34 +236,26 @@ function getSetOfAmbiguousSamplesOrNull_mook(referenfeClass){
 
 
 
-
-disambiguatorsSamplingButtons.$lablesToVisualize.subscribe((label)=> {
+disambiguatorsSamplingButtons.$lablesToVisualize.subscribe(async (label)=> {
 
   if(label != null && label != undefined && label.length >0){
 
-
     //const inputObject = getSetOfAmbiguousSamplesOrNull_mook(label);
 
-    const inputObject = funzioneInput(label, ["Navigate To", "I need to contact my terapist"]);
+    const inputObject = await funzioneInput(label, ["Navigate To", "I need to contact my terapist"]);
 
+    console.log(inputObject);
     ambiguousSamplesVis.setNewSetOfAmbiguousSamplesOrNull(inputObject);
   }
 });
 
 
 
-
-/*
-
 const classifier = marcelle.mlpClassifier({ layers: [32, 32], epochs: 20 });
 
 
 
-
-trainingButton.$click.subscribe(() => {
-    classifier.train(trainingSet);
-  });
-
+const prog = marcelle.trainingProgress(classifier);
 
 const plotTraining = marcelle.trainingPlot(classifier);
 
@@ -279,6 +263,17 @@ const plotTraining = marcelle.trainingPlot(classifier);
 
 
 
+prog.$progress.subscribe(progs => 
+  {
+    if(progs.type == "success"){
+
+      //TODO Update ambiguities
+      //disambiguatorsSamplingButtons.
+    }
+  });
+
+
+/*
 const $predictions = input.$images
   .map(async (img) => {
     const features = await featureExtractor.process(img);
@@ -289,10 +284,7 @@ const $predictions = input.$images
 $predictions.subscribe(console.log);
 
 const predViz = marcelle.confidencePlot($predictions);
-
-
 */
-
 
 
 
@@ -300,15 +292,15 @@ dash.page(nameOfPages[0]).sidebar(description/*, startTrainingButton*/);
 dash.page(nameOfPages[0]).use([labelInput, submitLable]);
 dash.page(nameOfPages[0]).use(disambiguatorsSamplingButtons);
 
-
 dash.page(nameOfPages[1]).use(disambiguatorsSamplingButtons);
 dash.page(nameOfPages[1]).use(trainingSetBrowser);
 dash.page(nameOfPages[1]).use(clearTrainingSet);
-dash.page(nameOfPages[1]).sidebar(input, trainingButton);
+dash.page(nameOfPages[1]).sidebar(input);
 
-
+dash.page(nameOfPages[2]).use(prog);
 dash.page(nameOfPages[2]).use(disambiguatorsSamplingButtons);
 dash.page(nameOfPages[2]).use(ambiguousSamplesVis);
+dash.page(nameOfPages[2]).sidebar(plotTraining);
 
 
 dash.show();
@@ -317,6 +309,12 @@ attachListenersOfTabs();
 
 $currentPageThatIAmIn.subscribe((tab) => {
   disambiguatorsSamplingButtons.updateNewTab(tab);
+
+  if(tab == 2){
+
+    classifier.train(trainingSet);
+
+  }
 });
 
 $currentPageThatIAmIn.set(whichTabIAmIn());
