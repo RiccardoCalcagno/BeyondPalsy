@@ -4,7 +4,7 @@ import { Stream } from '@marcellejs/core';
 import { fastSamplingButtons } from './components';
 
 
-const nameOfPages = ['Set Up', 'Initial Input Set Definition', 'Sensitive Sampling'];
+const nameOfPages = ['Set Up', 'Initial Input Set Definition', 'Sensitive Sampling', 'Debugging'];
 
 
 const dash = marcelle.dashboard({
@@ -128,7 +128,6 @@ clearTrainingSet.$click.subscribe(() =>
 
 
 
-/*
 
 
 
@@ -160,10 +159,168 @@ $predictions.subscribe(console.log);
 
 const predViz = marcelle.confidencePlot($predictions);
 
+// Button that prints the predictions
+const printDataset = marcelle.button('Print data-set');
+printDataset.$click.subscribe(async () => {
+  let primary_label = 'Hunger';
+  let other_label_a = 'Call Mom';
+  let other_label_b = 'Navigate To';
 
-*/
+  console.log('Launching Denis function');
+  let two_ids = await denis_function(primary_label, other_label_a, other_label_b);
+  console.log('Finish Denis function');
+  console.log(two_ids);
+  return two_ids;
+});
 
 
+
+async function denis_function(primary_label, other_label_a, other_label_b) {
+  // Stream of items of the dataset: they DON't contain images,
+  // they contain, among important things:
+  //  - x -> tensor of length 1024, can be used to predict
+  //         confidences
+  //  - id -> id of the image, can be used to get the image
+  //          from the data storage
+  let $instances_primary_label = trainingSet.items()
+    .query({y: primary_label });
+
+  // Converting the stream to an array
+  let arr_instances_primary_label = await $instances_primary_label.toArray();
+  console.log('Array of the instances of the primary label: [' + primary_label + ']');
+  console.log(arr_instances_primary_label);
+
+  let arr_id_pred = await Promise.all(arr_instances_primary_label.map(async (inst) => {
+    let pred = await classifier.predict(inst['x']);
+    return {'id': inst['id'].toString(), 'pred': pred};
+  }));
+
+  console.log('Array of the predictions of the instances of the primary label: [' + primary_label + ']');
+  console.log(arr_id_pred);
+
+  let max_confidence_label_a = -1;
+  let max_confidence_label_b = -1;
+  let idx_max_confidence_label_a = -1;
+  let idx_max_confidence_label_b = -1;
+
+  for (let index = 0; index < arr_id_pred.length; index++) {
+    let id_pred = arr_id_pred[index];
+    let pred = id_pred['pred'];
+    let conf_lab_a = pred['confidences'][other_label_a];
+    let conf_lab_b = pred['confidences'][other_label_b];
+    console.log(index + ' -> Confidence of label a: ' + conf_lab_a);
+    console.log(index + ' -> Confidence of label b: ' + conf_lab_b);
+    if (conf_lab_a > max_confidence_label_a) {
+      max_confidence_label_a = conf_lab_a;
+      idx_max_confidence_label_a = index;
+    }
+    if (conf_lab_b > max_confidence_label_b) {
+      max_confidence_label_b = conf_lab_b;
+      idx_max_confidence_label_b = index;
+    }
+  }
+
+  let ID_max_confidence_label_a = arr_id_pred[idx_max_confidence_label_a]['id'];
+  let ID_max_confidence_label_b = arr_id_pred[idx_max_confidence_label_b]['id'];
+
+  console.log('Max confidence of label a: ' + max_confidence_label_a);
+  console.log('Index of max confidence of label a: ' + idx_max_confidence_label_a);
+  console.log('Id of max confidence of label a: ' + ID_max_confidence_label_a);
+
+  console.log('Max confidence of label b: ' + max_confidence_label_b);
+  console.log('Index of max confidence of label b: ' + idx_max_confidence_label_b);
+  console.log('Id of max confidence of label b: ' + ID_max_confidence_label_b);
+
+  // ----- WORKING ON THE SECONDARY LABEL A -----
+  // Get the ID of the image in A with the highest confidence twoards the primary label
+
+  let $instances_secondary_label_a = trainingSet.items()
+    .query({y: other_label_a });
+
+  // Converting the stream to an array
+  let arr_instances_secondary_label_a = await $instances_secondary_label_a.toArray();
+  console.log('Array of the instances of the secondary label a: [' + other_label_a + ']');
+  console.log(arr_instances_secondary_label_a);
+
+  let arr_id_pred_a = await Promise.all(arr_instances_secondary_label_a.map(async (inst) => {
+    let pred = await classifier.predict(inst['x']);
+    return {'id': inst['id'].toString(), 'pred': pred};
+  }));
+
+  console.log('Array of the predictions of the instances of the secondary label a:');
+  console.log(arr_id_pred_a);
+
+  let max_confidence_label_a_twoards_primary_label = -1;
+  let idx_max_confidence_label_a_twoards_primary_label = -1;
+
+  for (let index = 0; index < arr_id_pred_a.length; index++) {
+    let id_pred = arr_id_pred_a[index];
+    let pred = id_pred['pred'];
+    let conf_lab_a = pred['confidences'][primary_label];
+    console.log(index + ' -> Confidence of label a twoards primary label: ' + conf_lab_a);
+    if (conf_lab_a > max_confidence_label_a_twoards_primary_label) {
+      max_confidence_label_a_twoards_primary_label = conf_lab_a;
+      idx_max_confidence_label_a_twoards_primary_label = index;
+    }
+  }
+
+  let ID_max_confidence_label_a_twoards_primary_label = arr_id_pred_a[idx_max_confidence_label_a_twoards_primary_label]['id'];
+
+  console.log('Max confidence of label a twoards primary label: ' + max_confidence_label_a_twoards_primary_label);
+  console.log('Index of max confidence of label a twoards primary label: ' + idx_max_confidence_label_a_twoards_primary_label);
+  console.log('Id of max confidence of label a twoards primary label: ' + arr_id_pred_a[idx_max_confidence_label_a_twoards_primary_label]['id']);
+
+  // ----- WORKING ON THE SECONDARY LABEL B -----
+  // Get the ID of the image in B with the highest confidence twoards the primary label
+
+  let $instances_secondary_label_b = trainingSet.items()
+    .query({y: other_label_b });
+
+  // Converting the stream to an array
+  let arr_instances_secondary_label_b = await $instances_secondary_label_b.toArray();
+  console.log('Array of the instances of the secondary label b: [' + other_label_b + ']');
+  console.log(arr_instances_secondary_label_b);
+
+  let arr_id_pred_b = await Promise.all(arr_instances_secondary_label_b.map(async (inst) => {
+    let pred = await classifier.predict(inst['x']);
+    return {'id': inst['id'].toString(), 'pred': pred};
+  }));
+
+  console.log('Array of the predictions of the instances of the secondary label b:');
+  console.log(arr_id_pred_b);
+
+  let max_confidence_label_b_twoards_primary_label = -1;
+  let idx_max_confidence_label_b_twoards_primary_label = -1;
+
+  for (let index = 0; index < arr_id_pred_b.length; index++) {
+    let id_pred = arr_id_pred_b[index];
+    let pred = id_pred['pred'];
+    let conf_lab_b = pred['confidences'][primary_label];
+    console.log(index + ' -> Confidence of label b twoards primary label: ' + conf_lab_b);
+    if (conf_lab_b > max_confidence_label_b_twoards_primary_label) {
+      max_confidence_label_b_twoards_primary_label = conf_lab_b;
+      idx_max_confidence_label_b_twoards_primary_label = index;
+    }
+  }
+
+  let ID_max_confidence_label_b_twoards_primary_label = arr_id_pred_b[idx_max_confidence_label_b_twoards_primary_label]['id'];
+  
+  console.log('Max confidence of label b twoards primary label: ' + max_confidence_label_b_twoards_primary_label);
+  console.log('Index of max confidence of label b twoards primary label: ' + idx_max_confidence_label_b_twoards_primary_label);
+  console.log('Id of max confidence of label b twoards primary label: ' + arr_id_pred_b[idx_max_confidence_label_b_twoards_primary_label]['id']);
+
+
+// Returns:
+//  - ID of the image in the primary label closest to the secondary label A
+//  - ID of the image in the primary label closest to the secondary label B
+//  - ID of the image in the secondary label A closest to the primary label
+//  - ID of the image in the secondary label B closest to the primary label
+
+  return [ID_max_confidence_label_a, 
+          ID_max_confidence_label_b, 
+          ID_max_confidence_label_a_twoards_primary_label, 
+          ID_max_confidence_label_b_twoards_primary_label];
+}
 
 
 dash.page(nameOfPages[0]).sidebar(description/*, startTrainingButton*/);
@@ -175,6 +332,9 @@ dash.page(nameOfPages[1]).use(disambiguatorsSamplingButtons);
 dash.page(nameOfPages[1]).use(trainingSetBrowser);
 dash.page(nameOfPages[1]).use(clearTrainingSet);
 dash.page(nameOfPages[1]).sidebar(input, trainingButton);
+dash.page(nameOfPages[1]).use(plotTraining);
+
+dash.page(nameOfPages[3]).use([printDataset]);
 
 dash.show();
 
