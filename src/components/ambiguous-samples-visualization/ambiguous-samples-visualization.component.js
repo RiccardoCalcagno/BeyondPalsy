@@ -2,8 +2,9 @@ import { Component } from '@marcellejs/core';
 import View from './ambiguous-samples-visualization.view.svelte';
 
 export class AmbiguousSamplesVisualization extends Component {
-    constructor() {
+    constructor(addRemoveButton) {
         super();
+        this.addRemoveButton = addRemoveButton;
         this.title = 'Visualization of major ambiguities';
     }
 
@@ -15,14 +16,26 @@ export class AmbiguousSamplesVisualization extends Component {
             target: t,
             props: {
                 title: this.title,
+                addRemoveButton: this.addRemoveButton,
             }
         });
 
         this.updateView();
     }
 
+    setVisibility(isVisible){
+        var inputFieldPassing= document.getElementById("2inputFieldPassing");
+
+        if(inputFieldPassing == null || inputFieldPassing == undefined) return;
+        inputFieldPassing.value = "2#"+isVisible;
+        
+        this.updateValues();
+    }
+
     updateValues(){
         var updateLablesButton= document.getElementById("2updateValuesFromInputField");
+        if(updateLablesButton == null || updateLablesButton == undefined) return;
+
         if(updateLablesButton){
             updateLablesButton.click();
         }
@@ -30,6 +43,8 @@ export class AmbiguousSamplesVisualization extends Component {
     
     updateView(){
         var updateLablesButton= document.getElementById("2updateView");
+        if(updateLablesButton == null || updateLablesButton == undefined) return;
+
         if(updateLablesButton)
             updateLablesButton.click();
     }
@@ -37,6 +52,8 @@ export class AmbiguousSamplesVisualization extends Component {
 
     setNewSetOfAmbiguousSamplesOrNull(newSet){
         var inputFieldPassing= document.getElementById("2inputFieldPassing");
+        if(inputFieldPassing == null || inputFieldPassing == undefined) return;
+
         inputFieldPassing.value = "1#"+JSON.stringify(newSet);
         
         this.updateValues();

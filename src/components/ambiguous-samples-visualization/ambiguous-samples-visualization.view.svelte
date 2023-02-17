@@ -1,7 +1,9 @@
 <script>
 import { ViewContainer } from '@marcellejs/design-system';
 export let title;
+export let addRemoveButton;
 
+let isVisible = false;
 let setOfAmbiguousSamples = null;
 
 
@@ -17,9 +19,36 @@ function updateValuesFromInputField(){
       console.log("arrived set: "+JSON.stringify(setOfAmbiguousSamples));
       updateView();
     break;
+    case "2":
+    isVisible = parts[1] != "false";
+    setVisibility(isVisible);
+    break;
   
     default:
       break;
+  }
+}
+
+
+function setVisibility(isVisible){
+  var components = document.getElementsByClassName("card");
+
+  var myCard = null;
+  for(let i=0; i<components.length; i++){
+    var possible = components.item(i);
+    if(possible.innerHTML.includes("IDENTIFIER_FOR_AMBIGUOUS_SAMPLES")){
+      myCard = possible;
+      break;
+    }
+  }
+
+  if(myCard== null) return;
+
+  if(!isVisible){
+    myCard.setAttribute("class", "hiddenClass card");
+  }
+  else{
+    myCard.setAttribute("class", "card");
   }
 }
 
@@ -28,7 +57,6 @@ function setHtmlOfPanelFromInputSet(inputSet)
 {
 
 if(inputSet == null || inputSet == undefined 
-|| inputSet.arrayOfAmbiguity == null || inputSet.arrayOfAmbiguity == undefined ||inputSet.arrayOfAmbiguity.length ==0
 || inputSet.name_BestConfident_Valid== null || inputSet.name_BestConfident_Valid == undefined){
   return;
 }
@@ -41,14 +69,24 @@ var mainNode = document.getElementById("mainContainer");
       <p class="name_BestConfident_Valid name"><i>Best sample of </i>`+inputSet.name_BestConfident_Valid+`</p>
   `;
 
-  inputSet.arrayOfAmbiguity.forEach( ambiguity => {
-
+  if(inputSet.arrayOfAmbiguity != null && inputSet.arrayOfAmbiguity!= undefined)
+  {
+    inputSet.arrayOfAmbiguity.forEach( ambiguity => {
     outputText = appendNewAmbiguityToTest(outputText, ambiguity);
-  });
+    });
+  }
+
 
   outputText += `</div></div>`;
 
   mainNode.innerHTML = outputText;
+
+  var containersOFThumbnalis = mainNode.getElementsByClassName("containerOFThumbnalis");
+
+  for(let i=0; i<containersOFThumbnalis.length; i++){
+    var cont = containersOFThumbnalis[i];
+    addRemoveButton(cont);
+  }
 }
 
 function appendNewAmbiguityToTest(startingText, objOfAmbiguity){
@@ -61,9 +99,7 @@ function appendNewAmbiguityToTest(startingText, objOfAmbiguity){
   }
 
   const validSampleClosestToTheWrongClass = objOfAmbiguity.validSampleClosestToTheWrongClass;
-  if(validSampleClosestToTheWrongClass != undefined && validSampleClosestToTheWrongClass!= null){
-    nameOfAmbiguity = validSampleClosestToTheWrongClass.name;
-  }
+
 
   if(nameOfAmbiguity == "")
   {
@@ -75,11 +111,14 @@ function appendNewAmbiguityToTest(startingText, objOfAmbiguity){
         <div><p class="invalidClassName"><strong><i>Ambiguity with label: </i>`+nameOfAmbiguity+`</strong></p></div>
         <div class="containerOfExamples">`;
 
+
   if(closestSampleInsideWrongClass != undefined && closestSampleInsideWrongClass!= null){
     startingText += `
       <div class="closestSampleInsideWrongClass">
             <div class="sampleContainer">
-              <img class="thumbnail" src='`+closestSampleInsideWrongClass.thumbnail+`'>
+              <div class="containerOFThumbnalis" style="padding: 0.5em 2em;" id="zzz#`+closestSampleInsideWrongClass.id+`">
+                <img class="thumbnail" src='`+closestSampleInsideWrongClass.thumbnail+`'>
+              </div>
               <p class="name"><i>Some samples of  </i>"`+nameOfAmbiguity+`"<i>  are too similar!</i></p>
             </div>
           </div>          `;
@@ -88,7 +127,9 @@ function appendNewAmbiguityToTest(startingText, objOfAmbiguity){
     startingText += `
     <div class="validSampleClosestToTheWrongClass">
             <div class="sampleContainer">
-              <img class="thumbnail" src='`+validSampleClosestToTheWrongClass.thumbnail+`'>
+              <div class="containerOFThumbnalis" style="padding: 0.5em 2em;"  id="zzz#`+validSampleClosestToTheWrongClass.id+`">
+                <img class="thumbnail" src='`+validSampleClosestToTheWrongClass.thumbnail+`'>
+              </div>
               <p class="name"><i>Some recognized samples are too similar to </i>"`+nameOfAmbiguity+`"<i>!</i></p>
             </div>
           </div>        
@@ -109,7 +150,7 @@ function updateView(){
 </script>
 
 <ViewContainer {title}>
-  <button class="hiddenClass" id="2updateView" on:click={updateView}>Update Labels</button>
+  <button class="hiddenClass" id="2updateView" on:click={updateView}>IDENTIFIER_FOR_AMBIGUOUS_SAMPLES</button>
 
   <button class="hiddenClass" id="2updateValuesFromInputField" on:click={updateValuesFromInputField}>Update Values</button>
   <input class="hiddenClass" id="2inputFieldPassing" type="text"> 
@@ -118,33 +159,6 @@ function updateView(){
 
   <div id="mainContainer">
 
-    <!--
-    <div class="SubjectClassDesc">
-      <img class="thumbnail_BestConfident_Valid thumbnail" src='images/1.png'>
-      <p class="name_BestConfident_Valid name"><i>Best sample of </i>Name as Example</p>
-
-      <div class="elementOfarrayOfAmbiguity">
-        <div><p class="invalidClassName"><strong><i>Ambiguity with label: </i>Name as Example</strong></p></div>
-        <div class="containerOfExamples">
-
-          
-          <div class="closestSampleInsideWrongClass">
-            <div class="sampleContainer">
-              <img class="thumbnail" src='images/2.png'>
-              <p class="name"><i>Some samples of  </i>"Name as Example"<i>  are too similar!</i></p>
-            </div>
-          </div>
-          
-          <div class="validSampleClosestToTheWrongClass">
-            <div class="sampleContainer">
-              <img class="thumbnail" src='images/3.png'>
-              <p class="name"><i>Some recognized samples are too similar to </i>"Name as Example"<i>!</i></p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    -->
   </div>
 
 

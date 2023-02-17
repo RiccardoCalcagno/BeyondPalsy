@@ -1,13 +1,18 @@
 <script>
 import * as marcelle from '@marcellejs/core';
 import { ViewContainer } from '@marcellejs/design-system';
-export let title;
+
 export let handleClickToSample;
 export let handleClickToVisualization;
 export let labels;
-export let ambiguities;
+export let addRemoveButton;
+export let removeLableFunc;
 
+
+let ambiguities = {};
+let title;
 let enableToSampleCam = false;
+let isVisible = false;
 let pageThatIAmIn;
 
 
@@ -58,6 +63,16 @@ function updateValuesFromInputField(){
     case "2":
     enableToSampleCam = parts[1] != "false";
     break;
+
+    case "3":
+    isVisible = parts[1] != "false";
+    setVisibility(isVisible);
+    break;
+
+    case "4":
+    ambiguities = JSON.parse(parts[1]);
+    updateView();
+    break;
   
     default:
       break;
@@ -66,10 +81,52 @@ function updateValuesFromInputField(){
 }
 
 
+function setVisibility(isVisible){
+  var components = document.getElementsByClassName("card");
+
+  var myCard = null;
+  for(let i=0; i<components.length; i++){
+    var possible = components.item(i);
+    if(possible.innerHTML.includes("IDENTIFIER_FOR_FAST_SAMPLING")){
+      myCard = possible;
+      console.log("FOUND CARD "+possible.innerHTML)
+      break;
+    }
+  }
+
+  if(myCard == null) return;
+
+  if(!isVisible){
+    myCard.setAttribute("class", "hiddenClass card");
+  }
+  else{
+    myCard.setAttribute("class", "card");
+  }
+}
+
+
+
+
+
 function updateView(){
 
    if(!labels || labels.length == 0){
     return;
+   }
+
+
+   switch (pageThatIAmIn) {
+    case 0:
+      title = "Set of Labels";
+      break;
+      case 1:
+      title = "Capture your expression";
+      break;
+      case 2:
+      title = "Visualize the ambiguities";
+      break;
+    default:
+      break;
    }
 
     let containerTarget = document.querySelector(`#containerOfButtons`);
@@ -94,10 +151,15 @@ function updateView(){
       }
       
       newButton.innerHTML = "<img class='labelIdImg' src=\""+getImageUrlOfLable(element)+"\" />"+"<div class='textOfButton'>"+element+"</div>";
+
+      if(pageThatIAmIn == 0){
+        addRemoveButton(newButton, () => removeLableFunc(element));
+      }
+
       containerTarget.appendChild(newButton);
 
 
-      let listOfAmbiguicies = ambiguities.get(element);
+      let listOfAmbiguicies = ambiguities[element];
       if(pageThatIAmIn>0 && listOfAmbiguicies != undefined && listOfAmbiguicies != null && listOfAmbiguicies.length>0){
         let listOfAmbiguices = document.createElement("div");
         listOfAmbiguices.setAttribute("id", "listOfAmbiguicies_"+element);
@@ -118,11 +180,13 @@ function updateView(){
 };
 
 
+
+
 </script>
 
 
 <ViewContainer {title}>
-  <button class="hiddenClass" id="updateLablesButton" on:click={updateView}>Update Labels</button>
+  <button class="hiddenClass" id="updateLablesButton" on:click={updateView}>IDENTIFIER_FOR_FAST_SAMPLING</button>
 
   <button class="hiddenClass" id="updateValuesFromInputField" on:click={updateValuesFromInputField}>Update Values</button>
   <input class="hiddenClass" id="inputFieldPassing" type="text"> 

@@ -4,13 +4,23 @@ import  View  from './fast-sampling-buttons.view.svelte';
 
 
 export class FastSamplingButtons extends Component {
-    constructor(initialLables = [], initialAmbiguities = new Map()) {
+    constructor(initialLables, addRemoveButton) {
         super();
-        this.title = 'Fast Sampling Buttons';
         this.labels = initialLables;
-        this.ambiguities = initialAmbiguities;
         this.$lableSampled = new Stream([], true);
         this.$lablesToVisualize = new Stream([], true);
+        this.addRemoveButton = addRemoveButton;
+        
+        this.removeLableFunc =
+        (label) => {
+
+            const index = this.labels.indexOf(label);
+            if (index > -1) { // only splice array when item is found
+                this.labels.splice(index, 1); // 2nd parameter means remove one item only
+            }
+
+            this.updateView();
+        };
 
         this.handleClickToSample = (lable) => {
             this.$lableSampled.set(lable);
@@ -24,6 +34,7 @@ export class FastSamplingButtons extends Component {
     setenableToSampleCam(isActive){
 
         var inputFieldPassing= document.getElementById("inputFieldPassing");
+        if(inputFieldPassing == null || inputFieldPassing == undefined) return;
 
         if(inputFieldPassing!= null){
             inputFieldPassing.value = "2#"+isActive;
@@ -32,22 +43,47 @@ export class FastSamplingButtons extends Component {
         }
     }
 
+    setVisibility(isVisible){
+        var inputFieldPassing= document.getElementById("inputFieldPassing");
+        if(inputFieldPassing == null || inputFieldPassing == undefined) return;
+
+        inputFieldPassing.value = "3#"+isVisible;
+        
+        this.updateValues();
+    }
+
     updateNewTab(tab){
 
         var inputFieldPassing= document.getElementById("inputFieldPassing");
+        if(inputFieldPassing == null || inputFieldPassing == undefined) return;
+
         inputFieldPassing.value = "1#"+tab;
+        
+        this.updateValues();
+    }
+
+    updateAmbiguities(ambiguities_){
+
+        var inputFieldPassing= document.getElementById("inputFieldPassing");
+        if(inputFieldPassing == null || inputFieldPassing == undefined) return;
+
+        inputFieldPassing.value = "4#"+JSON.stringify(ambiguities_);
         
         this.updateValues();
     }
 
     updateValues(){
         var updateLablesButton= document.getElementById("updateValuesFromInputField");
+        if(updateLablesButton == null || updateLablesButton == undefined) return;
+
         if(updateLablesButton)
             updateLablesButton.click();
     }
 
     updateView(){
         var updateLablesButton= document.getElementById("updateLablesButton");
+        if(updateLablesButton == null || updateLablesButton == undefined) return;
+
         if(updateLablesButton)
             updateLablesButton.click();
     }
@@ -59,21 +95,13 @@ export class FastSamplingButtons extends Component {
         this.$$.app = new View({
             target: t,
             props: {
-                title: this.title,
                 labels: this.labels,
                 handleClickToSample: this.handleClickToSample,
                 handleClickToVisualization: this.handleClickToVisualization,
-                ambiguities: this.ambiguities,
+                addRemoveButton: this.addRemoveButton,
+                removeLableFunc: this.removeLableFunc,
             }
         })
-
-        this.updateView();
-    }
-
-
-
-    updateAmbiguities(ambiguities_){
-        this.ambiguities = ambiguities_;
 
         this.updateView();
     }
