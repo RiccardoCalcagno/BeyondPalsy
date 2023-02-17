@@ -2,10 +2,13 @@
 import * as marcelle from '@marcellejs/core';
 import { ViewContainer } from '@marcellejs/design-system';
 export let title;
-export let handleClickExtern;
+export let handleClickToSample;
+export let handleClickToVisualization;
 export let labels;
-export let enableToShareClicks;
 export let ambiguities;
+
+let enableToSampleCam = false;
+let pageThatIAmIn;
 
 
 function getImageUrlOfLable(label){
@@ -20,20 +23,55 @@ function getImageUrlOfLable(label){
 
 }
 
+function isSamplingPage(){
+  return pageThatIAmIn == 1;
+}
+
 
 const handleClick = (item) => {
-
-  if(enableToShareClicks){
-    handleClickExtern(item);
-  }
+    if(isSamplingPage()){
+      if(enableToSampleCam){
+        handleClickToSample(item);
+      }
+      else{
+        alert("turn on the camera before")
+      }
+    }
+    else
+    {
+      handleClickToVisualization(item);
+    }
   };
+
+
+function updateValuesFromInputField(){
+  var inputFieldPassing= document.getElementById("inputFieldPassing");
+   
+  var parts = inputFieldPassing.value.split("#");
+
+  switch (parts[0]) {
+    case "1":
+    pageThatIAmIn = +parts[1];
+    updateView();
+    break;
+
+    case "2":
+    enableToSampleCam = parts[1] != "false";
+    break;
+  
+    default:
+      break;
+  }
+
+}
+
 
 function updateView(){
 
    if(!labels || labels.length == 0){
     return;
    }
-   
+
     let containerTarget = document.querySelector(`#containerOfButtons`);
 
     containerTarget.innerHTML ="";
@@ -44,16 +82,23 @@ function updateView(){
       newButton.setAttribute("id", "button_"+element);
       newButton.setAttribute("class", "fastButton");
 
-      newButton.onclick = function() {
+
+      if(pageThatIAmIn == 0){
+        newButton.disabled = true;
+      }
+      else{
+        newButton.disabled = false;
+        newButton.onclick = function() {
         handleClick(element)
       };
+      }
       
       newButton.innerHTML = "<img class='labelIdImg' src=\""+getImageUrlOfLable(element)+"\" />"+"<div class='textOfButton'>"+element+"</div>";
       containerTarget.appendChild(newButton);
 
 
       let listOfAmbiguicies = ambiguities.get(element);
-      if(listOfAmbiguicies != undefined && listOfAmbiguicies != null && listOfAmbiguicies.length>0){
+      if(pageThatIAmIn>0 && listOfAmbiguicies != undefined && listOfAmbiguicies != null && listOfAmbiguicies.length>0){
         let listOfAmbiguices = document.createElement("div");
         listOfAmbiguices.setAttribute("id", "listOfAmbiguicies_"+element);
         listOfAmbiguices.setAttribute("class", "listOfAmbiguicies");
@@ -77,7 +122,10 @@ function updateView(){
 
 
 <ViewContainer {title}>
-  <button id="updateLablesButton" on:click={() => updateView()}>Update Labels</button>
+  <button class="hiddenClass" id="updateLablesButton" on:click={updateView}>Update Labels</button>
+
+  <button class="hiddenClass" id="updateValuesFromInputField" on:click={updateValuesFromInputField}>Update Values</button>
+  <input class="hiddenClass" id="inputFieldPassing" type="text"> 
 
   <div id="containerOfButtons"></div>
 
@@ -116,7 +164,7 @@ function updateView(){
   }
 
 
-  #updateLablesButton{
+  .hiddenClass{
     display: none;
   }
 
