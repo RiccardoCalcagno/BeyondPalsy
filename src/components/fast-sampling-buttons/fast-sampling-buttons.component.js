@@ -1,21 +1,49 @@
 import * as marcelle from '@marcellejs/core';
-import { Component } from '@marcellejs/core';
+import { Component, Stream } from '@marcellejs/core';
 import  View  from './fast-sampling-buttons.view.svelte';
 
 
 export class FastSamplingButtons extends Component {
-    constructor(lablesClicked, initialLables = [], initialAmbiguities = new Map()) {
+    constructor(initialLables = [], initialAmbiguities = new Map()) {
         super();
         this.title = 'Fast Sampling Buttons';
         this.labels = initialLables;
-        this.enableToShareClicks = false;
         this.ambiguities = initialAmbiguities;
+        this.$lableSampled = new Stream([], true);
+        this.$lablesToVisualize = new Stream([], true);
 
-        this.handleClickExtern = (lable) => {
-            this.$lablesClicked.set(lable);
+        this.handleClickToSample = (lable) => {
+            this.$lableSampled.set(lable);
         };
 
-        this.$lablesClicked = lablesClicked;
+        this.handleClickToVisualization = (label) => {
+            this.$lablesToVisualize.set(label);
+        }
+    }
+
+    setenableToSampleCam(isActive){
+
+        var inputFieldPassing= document.getElementById("inputFieldPassing");
+
+        if(inputFieldPassing!= null){
+            inputFieldPassing.value = "2#"+isActive;
+
+            this.updateValues();
+        }
+    }
+
+    updateNewTab(tab){
+
+        var inputFieldPassing= document.getElementById("inputFieldPassing");
+        inputFieldPassing.value = "1#"+tab;
+        
+        this.updateValues();
+    }
+
+    updateValues(){
+        var updateLablesButton= document.getElementById("updateValuesFromInputField");
+        if(updateLablesButton)
+            updateLablesButton.click();
     }
 
     updateView(){
@@ -33,8 +61,8 @@ export class FastSamplingButtons extends Component {
             props: {
                 title: this.title,
                 labels: this.labels,
-                enableToShareClicks: this.enableToShareClicks,
-                handleClickExtern: this.handleClickExtern,
+                handleClickToSample: this.handleClickToSample,
+                handleClickToVisualization: this.handleClickToVisualization,
                 ambiguities: this.ambiguities,
             }
         })
