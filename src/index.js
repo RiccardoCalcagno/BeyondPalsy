@@ -82,13 +82,14 @@ clearTrainingSet.title = 'Clear training set command';
 
 
 
-const $instances = disambiguatorsSamplingButtons.$lablesClicked
+let $instances = disambiguatorsSamplingButtons.$lablesClicked
     .map(async () => ({
         x: await featureExtractor.process(input.captureImage()),
         y: disambiguatorsSamplingButtons.$lablesClicked.get(),
         thumbnail: input.captureThumbnail(),
     }))
     .awaitPromises();
+
 
     
 const store = marcelle.dataStore('localStorage');
@@ -221,7 +222,11 @@ denis_button.$click.subscribe(async () => {
   let other_label_b = 'Navigate To';
 
   console.log('Launching Denis function');
-  let four_ids = await denis_function(primary_label, other_label_a, other_label_b);
+
+
+  var trialArrey = [other_label_a, other_label_b];
+  let four_ids = await riccardo_edit_denis_function(primary_label, trialArrey);
+  //let four_ids = await denis_function(primary_label, other_label_a, other_label_b);
   console.log('Finish Denis function');
   console.log(four_ids);
   return four_ids;
@@ -230,6 +235,11 @@ denis_button.$click.subscribe(async () => {
 
 
 async function denis_function(primary_label, other_label_a, other_label_b) {
+
+
+
+
+
   // Stream of items of the dataset: they DON't contain images,
   // they contain, among important things:
   //  - x -> tensor of length 1024, can be used to predict
@@ -386,6 +396,164 @@ async function denis_function(primary_label, other_label_a, other_label_b) {
           ID_max_confidence_label_a_twoards_primary_label, 
           ID_max_confidence_label_b_twoards_primary_label];
 }
+
+
+async function riccardo_edit_denis_function(primary_label, arrayOfAmbiguicies) {
+
+  const numOfAmbig = arrayOfAmbiguicies.length;
+  
+  // Stream of items of the dataset: they DON't contain images,
+  // they contain, among important things:
+  //  - x -> tensor of length 1024, can be used to predict
+  //         confidences
+  //  - id -> id of the image, can be used to get the image
+  //          from the data storage
+  let $instances_primary_label = trainingSet.items()
+    .query({y: primary_label });
+
+  // Converting the stream to an array
+  let arr_instances_primary_label = await $instances_primary_label.toArray();
+  console.log('Array of the instances of the primary label: [' + primary_label + ']');
+  console.log(arr_instances_primary_label);
+
+
+  let arr_id_pred = await Promise.all(arr_instances_primary_label.map(async (inst) => {
+    let pred = await classifier.predict(inst['x']);
+    return {'id': inst['id'].toString(), 'pred': pred};
+  }));
+
+  console.log('Array of the predictions of the instances of the primary label: [' + primary_label + ']');
+  console.log(arr_id_pred);
+
+
+
+  let max_confidence_goodOne = -1;
+  let idx_max_confidence_goodOne = -1;
+
+  let max_confidence_ambiguicies = [];
+  let idx_max_confidence_ambiguicies = [];
+  arrayOfAmbiguicies.forEach(ambig => {
+    max_confidence_ambiguicies.push(-1);
+    idx_max_confidence_ambiguicies.push(-1);
+  });
+  
+  for (let index = 0; index < arr_id_pred.length; index++) {
+
+    let id_pred = arr_id_pred[index];
+    let pred = id_pred['pred'];
+
+    let conf_lab_confidence_ambiguicies = [];
+    arrayOfAmbiguicies.forEach(ambig => {
+      const conf= pred['confidences'][ambig];  
+      conf_lab_confidence_ambiguicies.push(conf);
+      console.log(index + ' -> Confidence of label '+ambig+': ' + conf);
+    });
+    for(var i=0; i<numOfAmbig; i++){
+      if (conf_lab_confidence_ambiguicies[i] > max_confidence_ambiguicies[i]) {
+        max_confidence_ambiguicies[i] = conf_lab_confidence_ambiguicies[i];
+        idx_max_confidence_ambiguicies[i] = index;
+      }
+    }
+
+    let conf_lab_confidence_goodOne = pred['confidences'][primary_label];  
+    if (conf_lab_confidence_goodOne > max_confidence_goodOne) {
+      max_confidence_goodOne = conf_lab_confidence_goodOne;
+      idx_max_confidence_goodOne = index;
+    }
+  }
+
+
+  var ID_max_confidence_good_one = arr_id_pred[idx_max_confidence_goodOne]['id'];
+
+  var ID_max_confidence_ambiguicies = [];
+  for(var i=0; i<numOfAmbig; i++){
+    ID_max_confidence_ambiguicies[i] = arr_id_pred[idx_max_confidence_ambiguicies[i]]['id'];
+
+    console.log('Max confidence of label '+arrayOfAmbiguicies[i]+': ' + max_confidence_ambiguicies[i]);
+    console.log('Index of max confidence of label '+arrayOfAmbiguicies[i]+': ' + idx_max_confidence_ambiguicies[i]);
+    console.log('Id of max confidence of label '+arrayOfAmbiguicies[i]+': ' + ID_max_confidence_ambiguicies[i]);
+  }
+
+  // ----- WORKING ON THE DINAMIC AMBIGUOUS LABELS -----
+  // Get the ID of the image in A with the highest confidence twoards the primary label
+
+  let ID_max_confidence_label_i_twoards_primary_label = [];
+
+  for(let i=0; i<numOfAmbig; i++){
+
+    let $instances_secondary_label = trainingSet.items()
+    .query({y: arrayOfAmbiguicies[i] });
+
+    // Converting the stream to an array
+    let arr_instances_secondary_label = await $instances_secondary_label.toArray();
+
+    let arr_id_pred = await Promise.all(arr_instances_secondary_label.map(async (inst) => {
+      let pred = await classifier.predict(inst['x']);
+      return {'id': inst['id'].toString(), 'pred': pred};
+    }));
+
+    let max_confidence_label_i_twoards_primary_label = -1;
+    let idx_max_confidence_label_i_twoards_primary_label = -1;
+
+    for (let index = 0; index < arr_id_pred.length; index++) {
+      let id_pred = arr_id_pred[index];
+      let pred = id_pred['pred'];
+      let conf_lab = pred['confidences'][primary_label];
+
+      if (conf_lab > max_confidence_label_i_twoards_primary_label) {
+        max_confidence_label_i_twoards_primary_label = conf_lab;
+        idx_max_confidence_label_i_twoards_primary_label = index;
+      }
+    }
+
+    ID_max_confidence_label_i_twoards_primary_label[i] = arr_id_pred[idx_max_confidence_label_i_twoards_primary_label]['id'];
+  }
+
+  
+  let arr_thumbnails_primary_label = await trainingSet.items()
+  .query({id: ID_max_confidence_good_one }).toArray(); 
+  let instance_primary_label_goodOne =  arr_thumbnails_primary_label[0];
+  
+
+  const inputObject = 
+  {
+    thumbnail_BestConfident_Valid: instance_primary_label_goodOne['thumbnail'],
+    name_BestConfident_Valid: instance_primary_label_goodOne['y'],
+
+    arrayOfAmbiguity: []
+  };
+
+  for(let i=0; i<numOfAmbig; i++){
+
+    let arr1 = await trainingSet.items()
+    .query({id: ID_max_confidence_label_i_twoards_primary_label[i]  }).toArray(); 
+    let ele1 =  arr1[0];
+    let arr2 = await trainingSet.items()
+    .query({id: ID_max_confidence_ambiguicies[i]  }).toArray(); 
+    let ele2 =  arr2[0];
+
+    var ambuigucyObj = 
+    {
+      closestSampleInsideWrongClass:
+      {
+        name: ele1['y'],
+        thumbnail: ele1['thumbnail'],
+      },
+      validSampleClosestToTheWrongClass:
+      {
+        name: ele2['y'],
+        thumbnail: ele2['thumbnail'],
+      }
+    }
+
+    inputObject.arrayOfAmbiguity.push(ambuigucyObj);
+  }
+
+  return inputObject;
+}
+
+
+
 
 
 dash.page(nameOfPages[0]).sidebar(description/*, startTrainingButton*/);
